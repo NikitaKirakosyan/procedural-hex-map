@@ -43,15 +43,49 @@ public class HexMesh : MonoBehaviour
     }
 
 
-    private void Triangulate(HexCell cell)
+    private void TriangulateConnection(HexDirection direction, HexCell cell, Vector3 v1, Vector3 v2)
+    {
+        var neighbor = cell.GetNeighbor(direction);
+        if(neighbor == null)
+        {
+            return;
+        }
+
+        var bridge = HexMetrics.GetBridge(direction);
+        var v3 = v1 + bridge;
+        var v4 = v2 + bridge;
+
+        AddQuad(v1, v2, v3, v4);
+        AddQuadColor(cell.Color, neighbor.Color);
+
+        var nextNeighbor = cell.GetNeighbor(direction.Next());
+        if(direction <= HexDirection.E && nextNeighbor != null)
+        {
+            AddTriangle(v2, v4, v2 + HexMetrics.GetBridge(direction.Next()));
+            AddTriangleColor(cell.Color, neighbor.Color, nextNeighbor.Color);
+        }
+    }
+
+    private void Triangulate(HexDirection direction, HexCell cell)
     {
         var center = cell.transform.localPosition;
-        for(var i = 0; i < 6; i++)
+        var v1 = center + HexMetrics.GetFirstSolidCorner(direction);
+        var v2 = center + HexMetrics.GetSecondSolidCorner(direction);
+
+        AddTriangle(center, v1, v2);
+        AddTriangleColor(cell.Color);
+
+        if(direction <= HexDirection.SE)
         {
-            var v2 = center + HexMetrics.Corners[i];
-            var v3 = center + HexMetrics.Corners[i + 1];
-            AddTriangle(center, v2, v3);
-            AddTriangleColor(cell.Color);
+            TriangulateConnection(direction, cell, v1, v2);
+        }
+    }
+
+    private void Triangulate(HexCell cell)
+    {
+        for(var direction = HexDirection.NE; direction <= HexDirection.NW; direction++)
+        {
+            Triangulate(direction, cell);
         }
     }
 
@@ -74,5 +108,44 @@ public class HexMesh : MonoBehaviour
         {
             _colors.Add(color);
         }
+    }
+
+    private void AddTriangleColor(Color c1, Color c2, Color c3)
+    {
+        _colors.Add(c1);
+        _colors.Add(c2);
+        _colors.Add(c3);
+    }
+
+    private void AddQuad(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4)
+    {
+        var vertexIndex = _vertices.Count;
+        _vertices.Add(v1);
+        _vertices.Add(v2);
+        _vertices.Add(v3);
+        _vertices.Add(v4);
+        
+        _triangles.Add(vertexIndex);
+        _triangles.Add(vertexIndex + 2);
+        _triangles.Add(vertexIndex + 1);
+        _triangles.Add(vertexIndex + 1);
+        _triangles.Add(vertexIndex + 2);
+        _triangles.Add(vertexIndex + 3);
+    }
+
+    private void AddQuadColor(Color c1, Color c2, Color c3, Color c4)
+    {
+        _colors.Add(c1);
+        _colors.Add(c2);
+        _colors.Add(c3);
+        _colors.Add(c4);
+    }
+    
+    private void AddQuadColor (Color c1, Color c2) 
+    {
+        _colors.Add(c1);
+        _colors.Add(c1);
+        _colors.Add(c2);
+        _colors.Add(c2);
     }
 }
